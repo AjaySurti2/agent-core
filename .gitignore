@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Environment
+.env
+
+# Agent memory
+.agent_memory.json
+
+# OS
+.DS_Store

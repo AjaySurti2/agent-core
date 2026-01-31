@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Agent (WSL)",
+      "type": "python",
+      "request": "launch",
+      "module": "agent_core.main",
+      "justMyCode": true
+    }
+  ]
+}

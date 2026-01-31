@@ -1,0 +1,7 @@
+version: "3.9"
+
+services:
+  agent:
+    build: .
+    container_name: agent-core
+    restart: unless-stopped
