@@ -1,6 +1,7 @@
 from typing import Any, Dict, TypedDict, Optional, List
 
 from agent_core.tools.registry import ToolRegistry
+from agent_core.agent.memory_manager import MemoryManager
 
 
 # -----------------------------
@@ -19,6 +20,11 @@ class ExecutionResult(TypedDict):
 # -----------------------------
 
 class ToolExecutor:
+    """
+    Executes a single tool safely.
+    Never raises; always returns ExecutionResult.
+    """
+
     def __init__(self, registry: ToolRegistry):
         self.registry = registry
 
@@ -52,6 +58,11 @@ class ToolExecutor:
 # -----------------------------
 
 class ChainExecutor:
+    """
+    Executes a deterministic sequence of tool calls.
+    Stops immediately on first failure.
+    """
+
     def __init__(self, tool_executor: ToolExecutor):
         self.tool_executor = tool_executor
 
@@ -71,3 +82,30 @@ class ChainExecutor:
                 break
 
         return results
+
+
+# -----------------------------
+# Memory-Aware Chain Executor (Phase 20)
+# -----------------------------
+
+class MemoryAwareChainExecutor(ChainExecutor):
+    """
+    Executes a plan and records every execution result into memory.
+    """
+
+    def __init__(
+        self,
+        tool_executor: ToolExecutor,
+        memory_manager: MemoryManager,
+    ):
+        super().__init__(tool_executor)
+        self.memory_manager = memory_manager
+
+    def execute_plan(self, plan: Dict[str, Any]) -> List[ExecutionResult]:
+        results = super().execute_plan(plan)
+
+        for record in results:
+            self.memory_manager.record_execution(record)
+
+        return results
+
