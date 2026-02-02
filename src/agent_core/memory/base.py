@@ -1,12 +1,16 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
-class Memory(ABC):
+
+class BaseMemory(ABC):
+    """
+    Abstract base class for agent memory stores.
+    """
 
     @abstractmethod
-    def get(self, key: str):
-        ...
+    def load(self) -> Any:
+        pass
 
     @abstractmethod
-    def set(self, key: str, value):
-        ...
-
+    def save(self, data: Any) -> None:
+        pass
