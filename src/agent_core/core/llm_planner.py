@@ -1,30 +1,48 @@
-import json
-import os
 from typing import Dict, Any
 
 from agent_core.core.planner import Planner
+from agent_core.llm.factory import get_llm_client
 
 
 class LLMPlanner(Planner):
+    """
+    Phase 24 — Pluggable LLM Planner
+
+    Delegates planning decisions to a provider-agnostic LLM client.
+    Provider is selected via:
+        AGENT_LLM_PROVIDER=mock | openai | gemini
+    """
+
     def __init__(self):
-        self.model = os.getenv("AGENT_MODEL", "gpt-4o-mini")
+        self.client = get_llm_client()
 
     def plan(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """
-        TEMP deterministic logic (LLM-ready).
-        Replace body with real LLM call later.
+        State-driven planning.
+
+        Expected state:
+        {
+            "prompt": str,
+            "task_count": int
+        }
         """
+        prompt = state.get("prompt", "")
 
-        task_count = state.get("task_count", 0)
+        # Delegate decision-making to selected provider
+        result = self.client.plan(prompt, state)
 
-        if task_count < 3:
+        # Safety guardrail: ensure minimal contract
+        if not isinstance(result, dict):
             return {
-                "action": "run_tool",
-                "tool": "antigravity",
-                "reason": "periodic sanity check"
+                "action": "idle",
+                "reason": "invalid llm response"
             }
 
-        return {
-            "action": "idle",
-            "reason": "no action needed"
-        }
+        if "action" not in result:
+            return {
+                "action": "idle",
+                "reason": "missing action from llm"
+            }
+
+        return result
+

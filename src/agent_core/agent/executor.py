@@ -1,4 +1,6 @@
 from typing import Any, Dict, TypedDict, Optional, List
+from contextlib import contextmanager
+import signal
 
 from agent_core.tools.registry import ToolRegistry
 from agent_core.agent.memory_manager import MemoryManager
@@ -16,7 +18,33 @@ class ExecutionResult(TypedDict):
 
 
 # -----------------------------
-# Single Tool Executor (Phase 18)
+# Timeout Utilities (Phase 23.2)
+# -----------------------------
+
+class ToolTimeoutError(Exception):
+    pass
+
+
+@contextmanager
+def time_limit(seconds: int):
+    """
+    Enforces a hard execution timeout.
+    Linux / WSL-safe. Raises ToolTimeoutError.
+    """
+    def handler(signum, frame):
+        raise ToolTimeoutError("Tool execution timed out")
+
+    signal.signal(signal.SIGALRM, handler)
+    signal.alarm(seconds)
+
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+
+
+# -----------------------------
+# Single Tool Executor (Phase 18 → Hardened)
 # -----------------------------
 
 class ToolExecutor:
@@ -24,6 +52,8 @@ class ToolExecutor:
     Executes a single tool safely.
     Never raises; always returns ExecutionResult.
     """
+
+    DEFAULT_TIMEOUT_SECONDS = 10  # ⏱ production-safe default
 
     def __init__(self, registry: ToolRegistry):
         self.registry = registry
@@ -35,7 +65,9 @@ class ToolExecutor:
             if not isinstance(arguments, dict):
                 raise ValueError("Tool arguments must be a dict")
 
-            result = tool.run(**arguments)
+            # ---- TIME-BOUND EXECUTION ----
+            with time_limit(self.DEFAULT_TIMEOUT_SECONDS):
+                result = tool.run(**arguments)
 
             return {
                 "tool": tool_name,
@@ -108,4 +140,5 @@ class MemoryAwareChainExecutor(ChainExecutor):
             self.memory_manager.record_execution(record)
 
         return results
+
 
